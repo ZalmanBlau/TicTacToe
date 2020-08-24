@@ -8,6 +8,38 @@
     <script src="script.js"></script>
 </head>
 <body>
+    <div class="form-container">
+        <form>
+            <h3>Start a game</h3>
+            <div class="form-area">
+                <div class="form-control">
+                    <span class="input-description bold">Play w/ AI?</span>
+                    <label>
+                        <span class="input-description">Yes</span>
+                        <input type="radio" name="play-ai" value="true">
+                    </label>
+                    <label>
+                        <span class="input-description">No</span>
+                        <input type="radio" name="play-ai" value="false">
+                    </label>
+                </div>
+            </div>
+            <div class="form-area player-name-controls">
+                <label class="form-control">
+                    <span class="input-description bold">Player #1:</span>
+                    <input type="text" name="player1">
+                </label>
+                <label class="form-control">
+                    <span class="input-description bold">Player #2:</span>
+                    <input type="text" name="player2">
+                </label>
+            </div>
+            <label class="form-area button-area">
+                <button type="reset" class="reset-game">Reset</button>
+                <button type="submit">Submit</button>
+            </label>
+        </form>
+    </div>
     <table>
         <tr>
             <td></td>

@@ -1,0 +1,63 @@
+body {
+    display: grid;
+    grid-template-columns: 350px 1fr;
+    align-items: center;
+    justify-items: center;
+    grid-template-areas: "form-container board";
+}
+
+.form-container {
+    position: fixed;
+    height: 150px;
+    width: 350px;
+    top: 50%;
+    left: 0;
+    margin-top: -105px;
+    grid-area: form-container;
+}
+
+form {
+    display: flex;
+    flex-direction: column;
+    width: 300px;
+    margin: 0 auto;
+    height: 210px;
+    justify-content: space-around;
+    padding: 25px;
+    box-sizing: border-box;
+    border: 1px solid gray;
+}
+
+form h3 {
+    margin:0;
+}
+
+.form-control {
+    display: block;
+}
+
+.form-area.button-area {
+    margin: 0 auto;
+}
+
+.player-name-controls {
+    display: flex;
+    flex-direction: column;
+    flex-basis: 50px;
+    justify-content: space-between;
+}
+
+table {
+    background-color: green;
+    height: 1000px;
+    grid-area: board;
+}
+
+h3 {
+    text-align: center;
+}
+
+/* utilities */
+.bold {
+    font-weight: 700;
+}
