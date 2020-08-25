@@ -54,6 +54,8 @@ form h3 {
 
 .game-container {
     grid-area: game-container;
+    display: flex;
+    flex-direction: column;
 }
 
 .game-board {
@@ -88,7 +90,7 @@ h3 {
     text-align: center;
 }
 
-.game-status {
+.game-container .game-status {
     text-align: center;
     font-size: 24px;
     margin-bottom: 25px;
@@ -98,6 +100,10 @@ h3 {
 /* utilities */
 .bold {
     font-weight: 700;
+}
+
+.red {
+    color: red;
 }
 
 @media screen and (max-width: 700px){

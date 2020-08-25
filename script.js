@@ -166,7 +166,6 @@ const ticTacToe = (function(){
 
                 const updateStatusMessage = function(html){
                     const messageElement = htmlToElement(html);
-
                     removeAllChildren(gameStatusElement);
                     gameStatusElement.appendChild(messageElement);
                 }
@@ -184,6 +183,14 @@ const ticTacToe = (function(){
                     updateStatusMessage(
                         `<span>
                             Congratulations ${playerName}!! You Won!
+                        </span>`
+                    );
+                }
+
+                const showNewGameMessage = function(){
+                    updateStatusMessage(
+                        `<span>
+                            Start New Game!
                         </span>`
                     );
                 }
@@ -213,10 +220,13 @@ const ticTacToe = (function(){
                     showWinningMessage, 
                     showTiedMessage,
                     showPlayerTurnMessage,
+                    showNewGameMessage,
                     addPositionToBoard
                 };
 
             })();
+
+            uiHelper.showNewGameMessage();
 
             gameBoardElement.addEventListener("click", function(event){
                 addPositionToBlock(event.target, uiHelper);
