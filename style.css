@@ -1,14 +1,19 @@
+html {
+    height: 100%;
+}
+
 body {
     display: grid;
     grid-template-columns: 350px 1fr;
     align-items: center;
     justify-items: center;
-    grid-template-areas: "form-container board";
+    grid-template-areas: "form-container game-container";
+    height: 100%;
+    margin: 0;
 }
 
 .form-container {
     position: fixed;
-    height: 150px;
     width: 350px;
     top: 50%;
     left: 0;
@@ -47,10 +52,37 @@ form h3 {
     justify-content: space-between;
 }
 
-table {
-    background-color: green;
-    height: 1000px;
-    grid-area: board;
+.game-container {
+    grid-area: game-container;
+}
+
+.game-board {
+    display: grid;
+    grid-template-columns: repeat(3, 100px);
+    grid-template-rows: repeat(3, 100px);
+    margin: 0 25px;
+}
+
+.game-board .board-block {
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    border: 1px solid black;
+    margin-bottom: 1px;
+    margin-right: 1px;
+    text-align: center;
+    font-size: 32px;
+    text-transform: uppercase;
+}
+
+.game-board .board-block:hover {
+    background-color: blue;
+    cursor: pointer;
+}
+
+.game-board .board-block.taken:hover {
+    background-color: inherit;
+    cursor: auto;
 }
 
 h3 {
@@ -60,4 +92,28 @@ h3 {
 /* utilities */
 .bold {
     font-weight: 700;
+}
+
+@media screen and (max-width: 700px){
+    body {
+        grid-template-columns: 1fr;
+        grid-template-rows: repeat(2, max-content);
+        grid-template-areas: 
+            "form-container" 
+            "game-container";
+        grid-row-gap: 20px;
+        row-gap: 20px;
+    }
+
+    .form-container {
+        position: static;
+        margin: 0;
+        margin-top: 60px;
+    }
+
+    @supports (not (grid-gap: 0px)) and (not (gap: 0px)){
+        .form-container {
+            margin-bottom: 20px;
+        }
+    }
 }
