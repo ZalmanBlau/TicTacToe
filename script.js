@@ -1,74 +1,10 @@
 const ticTacToe = (function(){
-
     const game = function(player1, player2){
         let gameStatus = GameStatus.NOT_STARTED;
         const positionMatrix = [[], [], []];
         const players = [player1, player2];
-        const playersBoardPoints = [];
+        const playersBoardPoints = [boardPoints(), boardPoints()];
         let currentPlayerId = 0; 
-
-        const boardPoints = function(){
-            let totalPoints = 0;
-            let rowsPoints = [0, 0, 0];
-            let columnsPoints = [0, 0, 0];
-            let diagonalPoints = {
-                upward: 0,
-                downward: 0
-            }
-
-            const addPoint = function(rowIndex, columnIndex){
-                totalPoints++;
-                rowsPoints[rowIndex]++;
-                columnsPoints[columnIndex]++;
-                
-                // for center position
-                if(rowIndex == 1 && columnIndex == 1){
-                    diagonalPoints.upward++;
-                    diagonalPoints.downward++;
-                }
-
-                // for corner positions
-                const topLeftCorner = (rowIndex == 0 && columnIndex == 0);
-                const bottomRightCorner = (rowIndex == 2 && columnIndex == 2);
-                const topRightCorner = (rowIndex == 0 && columnIndex == 2);
-                const bottomLeftCorner = (rowIndex == 2 && columnIndex == 0);
-                
-                if(topLeftCorner || bottomRightCorner){
-                    diagonalPoints.downward++;
-                }
-
-                if(topRightCorner || bottomLeftCorner){
-                    diagonalPoints.upward++;
-                }
-            }
-
-            const hasFullRow = function(rowIndex){
-                return rowsPoints[rowIndex] >= 3;
-            }
-
-            const hasFullColumn = function(columnIndex){
-                return columnsPoints[columnIndex] >= 3;
-            }
-
-            const hasFullDiagonal = function(){
-                return (diagonalPoints.downward >= 3 || diagonalPoints.upward >= 3);
-            }
-
-            const getTotal = function(){
-                return totalPoints;
-            }
-
-            return {
-                addPoint,
-                hasFullRow,
-                hasFullColumn,
-                hasFullDiagonal,
-                getTotal
-            }
-        }
-
-        playersBoardPoints[0] = boardPoints();
-        playersBoardPoints[1] = boardPoints();
 
         const getCurrentPlayer = function(){
             return players[currentPlayerId];
@@ -117,8 +53,7 @@ const ticTacToe = (function(){
         }
 
         const getGameStatus = function(){
-            return gameStatus;
-        }
+            return gameStatus;        }
 
         const gameOver = function(){
             return (gameStatus == GameStatus.WON || gameStatus == GameStatus.TIED);
@@ -130,6 +65,66 @@ const ticTacToe = (function(){
             getGameStatus, 
             gameOver
         };
+    }
+
+    const boardPoints = function(){
+        let totalPoints = 0;
+        let rowsPoints = [0, 0, 0];
+        let columnsPoints = [0, 0, 0];
+        let diagonalPoints = {
+            upward: 0,
+            downward: 0
+        }
+
+        const addPoint = function(rowIndex, columnIndex){
+            totalPoints++;
+            rowsPoints[rowIndex]++;
+            columnsPoints[columnIndex]++;
+            
+            // for center position
+            if(rowIndex == 1 && columnIndex == 1){
+                diagonalPoints.upward++;
+                diagonalPoints.downward++;
+            }
+
+            // for corner positions
+            const topLeftCorner = (rowIndex == 0 && columnIndex == 0);
+            const bottomRightCorner = (rowIndex == 2 && columnIndex == 2);
+            const topRightCorner = (rowIndex == 0 && columnIndex == 2);
+            const bottomLeftCorner = (rowIndex == 2 && columnIndex == 0);
+            
+            if(topLeftCorner || bottomRightCorner){
+                diagonalPoints.downward++;
+            }
+
+            if(topRightCorner || bottomLeftCorner){
+                diagonalPoints.upward++;
+            }
+        }
+
+        const hasFullRow = function(rowIndex){
+            return rowsPoints[rowIndex] >= 3;
+        }
+
+        const hasFullColumn = function(columnIndex){
+            return columnsPoints[columnIndex] >= 3;
+        }
+
+        const hasFullDiagonal = function(){
+            return (diagonalPoints.downward >= 3 || diagonalPoints.upward >= 3);
+        }
+
+        const getTotal = function(){
+            return totalPoints;
+        }
+
+        return {
+            addPoint,
+            hasFullRow,
+            hasFullColumn,
+            hasFullDiagonal,
+            getTotal
+        }
     }
 
     const GameStatus = {
