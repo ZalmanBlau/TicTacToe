@@ -54,12 +54,16 @@ const ticTacToe = (function(){
                 return (diagonalPoints.downward >= 3 || diagonalPoints.upward >= 3);
             }
 
+            const getTotal = function(){
+                return totalPoints;
+            }
+
             return {
                 addPoint,
                 hasFullRow,
                 hasFullColumn,
                 hasFullDiagonal,
-                total: totalPoints
+                getTotal
             }
         }
 
@@ -71,7 +75,7 @@ const ticTacToe = (function(){
         }
 
         const allMovesTaken = function(){
-            return (playersBoardPoints[0].total + playersBoardPoints[1].total) >= 9;
+            return (playersBoardPoints[0].getTotal() + playersBoardPoints[1].getTotal()) >= 9;
         }
 
         const winnerExists = function(rowIndex, columnIndex){
@@ -139,13 +143,13 @@ const ticTacToe = (function(){
         return {human, name, symbol};
     }
 
-    const uiController = function(formContainerId, gameContainerId){
+    const uiController = function(formId, gameContainerId){
         let player1 = player(true, 'Player #1', "X");
         let player2 = player(true, 'Player #2', "O");
         let currentGame = game(player1, player2);
         
         const init = function(){
-            const formContainerElement = document.getElementById(formContainerId);
+            const formElement = document.getElementById(formId);
             const gameContainerElement = document.getElementById(gameContainerId);
             const gameBoardElement = gameContainerElement.getElementsByClassName('game-board')[0];
             const gameStatusElement = gameContainerElement.getElementsByClassName('game-status')[0];
@@ -159,9 +163,10 @@ const ticTacToe = (function(){
                 }
 
                 const removeAllChildren = function(element){
-                    Array.from(element.children).forEach(child => {
+                    for(let i = 0; element.children.length; i++){
+                        const child = element.children[i];
                         element.removeChild(child);
-                    });
+                    }
                 }
 
                 const updateStatusMessage = function(html){
@@ -215,18 +220,50 @@ const ticTacToe = (function(){
                     blockElement.textContent = symbol;
                 }
 
+                const clearBoard = function(){
+                    const boardBlockElements = gameBoardElement.getElementsByClassName('board-block');
+                    for(let i = 0; i < 9; i++){
+                        boardBlockElements[i].textContent = '';
+                    }
+                }
+
                 return {
                     showPositionTakenMessage, 
                     showWinningMessage, 
                     showTiedMessage,
                     showPlayerTurnMessage,
                     showNewGameMessage,
-                    addPositionToBoard
+                    addPositionToBoard,
+                    clearBoard
                 };
 
             })();
 
             uiHelper.showNewGameMessage();
+
+            const aiRadios = formElement.querySelectorAll('[name="play-ai"]');
+            for(let i = 0; i < 2; i++){
+                const aiRadio = aiRadios[i];
+                aiRadio.addEventListener("click", function(){
+                    const playAI = (formElement.querySelector('[name="play-ai"]:checked').value == 'true');
+                    const player2Control = formElement.querySelectorAll('.player-name-controls .form-control')[1];
+                    
+                    if(playAI){
+                        player2Control.style.display = 'none';
+                    } else {
+                        player2Control.style.display = '';
+                    }
+                });
+            }
+
+            formElement.addEventListener("submit", function(event){
+                event.preventDefault();
+
+                const playAI = (formElement.querySelector('[name="play-ai"]:checked').value == 'true');
+                const player1 = formElement.querySelector('[name="player1"]').value;
+                const player2 = formElement.querySelector('[name="player2"]').value;
+                startNewGame(playAI, player1, player2, uiHelper);
+            });
 
             gameBoardElement.addEventListener("click", function(event){
                 addPositionToBlock(event.target, uiHelper);
@@ -264,6 +301,19 @@ const ticTacToe = (function(){
             }
 
             return true;
+        }
+
+        const startNewGame = function(playWithAI, player1, player2, uiHelper){
+            player1 = player(true, player1, "X");
+            if(playWithAI){
+                player2 = player(false, "Computer", "O");
+            } else {
+                player2 = player(true, player2, "O");
+            }
+
+            currentGame = game(player1, player2);
+            uiHelper.clearBoard();
+            uiHelper.showPlayerTurnMessage(player1.name);
         }
 
         return {init};
