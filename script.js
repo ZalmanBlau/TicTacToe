@@ -6,8 +6,16 @@ const ticTacToe = (function(){
         const playersBoardPoints = [boardPoints(), boardPoints()];
         let currentPlayerId = 0; 
 
+        const hasMultipleHumanPlayers = function(){
+            return player1.isHuman && player2.isHuman;
+        }
+
         const getCurrentPlayer = function(){
             return players[currentPlayerId];
+        }
+
+        const getPositionMatrix = function(){
+            return positionMatrix;
         }
 
         const allMovesTaken = function(){
@@ -60,7 +68,9 @@ const ticTacToe = (function(){
         }
 
         return {
+            hasMultipleHumanPlayers,
             getCurrentPlayer, 
+            getPositionMatrix,
             addPosition,
             getGameStatus, 
             gameOver
@@ -134,8 +144,38 @@ const ticTacToe = (function(){
         NOT_STARTED: 'not started'
     }
 
-    const player = function(human, name, symbol){
-        return {human, name, symbol};
+    const player = function(isHuman, name, symbol){
+        const choosePositionIndex = function(currentGame){
+            if(currentGame.gameOver()){
+                throw "The game's over. No positions are available";
+            }
+
+            let row; 
+            let column;
+            let rowAvailable = false;
+            let columnAvailable = false;
+            const positionMatrix = currentGame.getPositionMatrix();
+
+            while(!rowAvailable){
+                row = Math.floor(Math.random() * 3);
+                rowAvailable = positionMatrix[row].length < 3 || 
+                    positionMatrix[row].includes(undefined);
+            }
+
+            while(!columnAvailable){
+                column = Math.floor(Math.random() * 3);
+                columnAvailable = !(column in positionMatrix[row]);
+            }
+            
+            return {row, column};
+        }
+
+        return {
+            choosePositionIndex, 
+            isHuman, 
+            name, 
+            symbol
+        };
     }
 
     const uiController = function(formId, gameContainerId){
@@ -211,7 +251,10 @@ const ticTacToe = (function(){
                     );
                 }
 
-                const addPositionToBoard = function(blockElement, symbol){
+                const addPositionToBoard = function(blockElement, blockId, symbol){
+                    if(!blockElement){
+                        blockElement = gameBoardElement.querySelector(`[data-block-id="${blockId}"]`);
+                    }
                     blockElement.textContent = symbol;
                 }
 
@@ -261,26 +304,44 @@ const ticTacToe = (function(){
             });
 
             gameBoardElement.addEventListener("click", function(event){
-                addPositionToBlock(event.target, uiHelper);
+                addPositionToBlock(event.target, null, uiHelper);
             });
         }
 
-        const addPositionToBlock = function(blockElement, uiHelper){
+        const addPositionToBlock = function(blockElement, positionIndex, uiHelper){
             if(currentGame.gameOver()){
                 return false;
             }
+
+            let blockId;
+            if(blockElement){
+                blockId = blockElement.dataset.blockId;
+            }
+
+            const getPositionIndexFromBlockId = function(blockId){
+                const row = Math.floor(blockId/3);
+                const column = blockId - (3*row);
+
+                return {row, column};
+            }
+
+            const getBlockIdFromPositionIndex = function(positionIndex){
+                return positionIndex.column + (positionIndex.row * 3);
+            }
             
-            const blockId = Number(blockElement.dataset.blockId);
-            const rowIndex = Math.floor(blockId/3);
-            const columnIndex = blockId - (3*rowIndex);
+            if(!positionIndex){
+                positionIndex = getPositionIndexFromBlockId(blockId);
+            }
+            
             const currentPlayer = currentGame.getCurrentPlayer();
 
-            if(!currentGame.addPosition(rowIndex, columnIndex)){
+            if(!currentGame.addPosition(positionIndex.row, positionIndex.column)){
                 uiHelper.showPositionTakenMessage(currentPlayer.name);
                 return false;
             }
 
-            uiHelper.addPositionToBoard(blockElement, currentPlayer.symbol);
+            blockId = blockId ? blockId : getBlockIdFromPositionIndex(positionIndex);
+            uiHelper.addPositionToBoard(blockElement, blockId, currentPlayer.symbol);
 
             switch(currentGame.getGameStatus()) {
                 case GameStatus.WON: 
@@ -291,7 +352,16 @@ const ticTacToe = (function(){
                     break;
                 default: 
                     const nextPlayer = currentGame.getCurrentPlayer();
-                    uiHelper.showPlayerTurnMessage(nextPlayer.name);
+
+                    if(currentGame.hasMultipleHumanPlayers()){
+                        uiHelper.showPlayerTurnMessage(nextPlayer.name);
+                        break;
+                    }
+
+                    if(!nextPlayer.isHuman){
+                        const positionIndex = nextPlayer.choosePositionIndex(currentGame);
+                        addPositionToBlock(null, positionIndex, uiHelper);
+                    }
                 break;
             }
 
