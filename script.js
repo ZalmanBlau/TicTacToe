@@ -14,29 +14,123 @@ const ticTacToe = (function(){
             return players[currentPlayerId];
         }
 
-        const getPositionMatrix = function(){
-            return positionMatrix;
-        }
-
         const allMovesTaken = function(){
             return (playersBoardPoints[0].getTotal() + playersBoardPoints[1].getTotal()) >= 9;
         }
 
-        const winnerExists = function(rowIndex, columnIndex){
-            const boardPoints = playersBoardPoints[currentPlayerId];
+        const boardIsEmpty = function(){
+            return (playersBoardPoints[0].getTotal() + playersBoardPoints[1].getTotal()) == 0;
+        }
 
-            return (boardPoints.hasFullColumn(columnIndex) || 
-                boardPoints.hasFullRow(rowIndex) || 
+        const playerWon = function(playerId){
+            const boardPoints = playersBoardPoints[playerId];
+
+            return (boardPoints.hasFullColumn() || 
+                boardPoints.hasFullRow() || 
                 boardPoints.hasFullDiagonal());
-
         }
 
-        const nextTurn = function(){
-            currentPlayerId = (currentPlayerId == 0 ? 1 : 0);
+        const iterateToNextPlayer = function(){
+            const nextPlayerId = (currentPlayerId == 0 ? 1 : 0);
+            setCurrentPlayer(nextPlayerId);
         }
 
-        const addPosition = function(rowIndex, columnIndex){
-            if(columnIndex in positionMatrix[rowIndex]){
+        const setCurrentPlayer = function(playerId){
+            currentPlayerId = playerId;
+        }
+
+        const nextBestPosition = function(){
+            const minimax = function(alpha, beta, depth, originalPlayerId, currentPlayerIsMaximizing){
+                let finalScore;
+
+                if(gameOver() || depth == 0){
+
+                    finalScore = 0;
+
+                    if(GameStatus.WON == getGameStatus()) {
+                        finalScore = playerWon(originalPlayerId) ? 1 : -1;
+                    }
+
+                    return {
+                        chosenPosition: null,
+                        score: finalScore
+                    }
+                }
+
+                let chosenPosition;
+                let updateValues;
+
+                if(currentPlayerIsMaximizing){
+                    finalScore = -Infinity;
+                    updateValues = (newScore, rowIndex, columnIndex) => {
+                        if(newScore > finalScore){
+                            finalScore = newScore;
+                            chosenPosition = {rowIndex, columnIndex}; 
+                        }
+                        alpha = Math.max(alpha, newScore);
+                    }
+                } else {
+                    finalScore = +Infinity;
+                    updateValues = (newScore, rowIndex, columnIndex) => {
+                        score = Math.min(finalScore, newScore);
+                        if(newScore < finalScore){
+                            finalScore = newScore;
+                            chosenPosition = {rowIndex, columnIndex}; 
+                        }
+                        alpha = Math.min(alpha, newScore);
+                    }
+                }
+
+                const nextPlayerIsMaximizing = !currentPlayerIsMaximizing;
+                const myPlayerId = currentPlayerId;
+
+                for(let i = 0; i < 3; i++){
+                    for(let j = 0; j < 3; j++){
+                        if(positionTaken(i, j)){
+                            continue;
+                        }
+
+                        setCurrentPlayer(myPlayerId);
+                        addPosition(i, j, false);
+                        iterateToNextPlayer();
+
+                        const result = minimax(alpha, beta, depth - 1, originalPlayerId, nextPlayerIsMaximizing);
+                        updateValues(result.score, i, j);
+                        
+                        removePosition(i, j);
+
+                        if(beta <= alpha){
+                            break;
+                        }
+                    }
+                }
+
+                return {
+                    chosenPosition, 
+                    score: finalScore
+                }
+            }
+
+            const originalPlayerId = currentPlayerId;
+            const result = minimax(-Infinity, Infinity, 9, originalPlayerId, true);
+            
+            currentPlayerId = originalPlayerId;
+
+            return result.chosenPosition;
+        }
+
+        const positionTaken = function(rowIndex, columnIndex){
+            return (columnIndex in positionMatrix[rowIndex])
+                && positionMatrix[rowIndex][columnIndex] != undefined 
+                && positionMatrix[rowIndex][columnIndex] != null;
+        }
+
+        const addPosition = function(rowIndex, columnIndex, iterateToNextPlayerAfterMove){
+            if(iterateToNextPlayerAfterMove == undefined){
+                iterateToNextPlayerAfterMove = true;
+            }
+
+            if(positionTaken(rowIndex, columnIndex)){
                 //invalid move, position already exists.
                 return false;
             }
@@ -50,18 +144,44 @@ const ticTacToe = (function(){
             positionMatrix[rowIndex][columnIndex] = currentPlayerId;
             playersBoardPoints[currentPlayerId].addPoint(rowIndex, columnIndex);
 
-            const hasWinner = winnerExists(rowIndex, columnIndex);
-            if(allMovesTaken() || hasWinner) {
-                gameStatus = (hasWinner ? GameStatus.WON : GameStatus.TIED);
+            const currentPlayerWon = playerWon(currentPlayerId);
+            if(allMovesTaken() || currentPlayerWon) {
+                gameStatus = (currentPlayerWon ? GameStatus.WON : GameStatus.TIED);
             } else {
-                nextTurn();
+                if(iterateToNextPlayerAfterMove){
+                    iterateToNextPlayer();
+                }
             }
             
             return true;
         }
 
+        const removePosition = function(rowIndex, columnIndex){
+            if(!positionTaken(rowIndex, columnIndex)){
+                return false;
+            }
+
+            const playerId = positionMatrix[rowIndex][columnIndex];
+            positionMatrix[rowIndex][columnIndex] = null;
+
+            playersBoardPoints[playerId].removePoint(rowIndex, columnIndex);
+            gameStatus = (boardIsEmpty() ? GameStatus.NOT_STARTED : GameStatus.IN_PROGRESS);
+            return true;
+        }
+
+        const scrubPosition = function(rowIndex, columnIndex){
+            positionMatrix[rowIndex][columnIndex] = null;
+        }
+
+        const scrubPositions = function(positions){
+            positions.forEach(position => {
+                scrubPosition(position.rowIndex, position.columnIndex)
+            });
+        }
+
         const getGameStatus = function(){
-            return gameStatus;        }
+            return gameStatus;        
+        }
 
         const gameOver = function(){
             return (gameStatus == GameStatus.WON || gameStatus == GameStatus.TIED);
@@ -69,15 +189,16 @@ const ticTacToe = (function(){
 
         return {
             hasMultipleHumanPlayers,
-            getCurrentPlayer, 
-            getPositionMatrix,
+            getCurrentPlayer,
+            nextBestPosition,
             addPosition,
             getGameStatus, 
-            gameOver
+            gameOver,
+            playerWon
         };
     }
 
-    const boardPoints = function(){
+    const boardPoints = function(boardPointsObj){
         let totalPoints = 0;
         let rowsPoints = [0, 0, 0];
         let columnsPoints = [0, 0, 0];
@@ -86,38 +207,102 @@ const ticTacToe = (function(){
             downward: 0
         }
 
-        const addPoint = function(rowIndex, columnIndex){
-            totalPoints++;
-            rowsPoints[rowIndex]++;
-            columnsPoints[columnIndex]++;
-            
-            // for center position
-            if(rowIndex == 1 && columnIndex == 1){
-                diagonalPoints.upward++;
-                diagonalPoints.downward++;
-            }
+        if(boardPointsObj){
+            totalPoints = boardPointsObj.getTotal();
+            rowsPoints = boardPointsObj.getRowPoints();
+            columnsPoints = boardPointsObj.getColumnsPoints();
+            diagonalPoints = boardPointsObj.getDiagonalPoints();
+        }
 
-            // for corner positions
+        const DiagonalDirection = {
+            NONE: 'none',
+            UPWARD: 'upward',
+            DOWNWARD: 'downward',
+            BI_DIRECTIONAL: 'bi-directional'
+        }
+
+        const getDiagonalDirectionFromIndex = function(rowIndex, columnIndex){
             const topLeftCorner = (rowIndex == 0 && columnIndex == 0);
             const bottomRightCorner = (rowIndex == 2 && columnIndex == 2);
             const topRightCorner = (rowIndex == 0 && columnIndex == 2);
             const bottomLeftCorner = (rowIndex == 2 && columnIndex == 0);
+            const center = (rowIndex == 1 && columnIndex == 1);
             
             if(topLeftCorner || bottomRightCorner){
-                diagonalPoints.downward++;
+                return DiagonalDirection.DOWNWARD;
             }
 
             if(topRightCorner || bottomLeftCorner){
+                return DiagonalDirection.UPWARD;
+            }
+
+            if(center){
+                return DiagonalDirection.BI_DIRECTIONAL;
+            }
+
+            return DiagonalDirection.NONE;
+        }
+
+        const addPoint = function(rowIndex, columnIndex){
+            totalPoints++;
+            rowsPoints[rowIndex]++;
+            columnsPoints[columnIndex]++;
+
+            const direction = getDiagonalDirectionFromIndex(rowIndex, columnIndex);
+            
+            if(direction == DiagonalDirection.DOWNWARD){
+                diagonalPoints.downward++;
+            }
+
+            if(direction == DiagonalDirection.UPWARD){
                 diagonalPoints.upward++;
+            }
+
+            if(direction == DiagonalDirection.BI_DIRECTIONAL){
+                diagonalPoints.upward++;
+                diagonalPoints.downward++;
             }
         }
 
-        const hasFullRow = function(rowIndex){
-            return rowsPoints[rowIndex] >= 3;
+        const removePoint = function(rowIndex, columnIndex){
+            totalPoints--;
+            rowsPoints[rowIndex]--;
+            columnsPoints[columnIndex]--;
+
+            const direction = getDiagonalDirectionFromIndex(rowIndex, columnIndex);
+            
+            if(direction == DiagonalDirection.DOWNWARD){
+                diagonalPoints.downward--;
+            }
+
+            if(direction == DiagonalDirection.UPWARD){
+                diagonalPoints.upward--;
+            }
+
+            if(direction == DiagonalDirection.BI_DIRECTIONAL){
+                diagonalPoints.upward--;
+                diagonalPoints.downward--;
+            }
         }
 
-        const hasFullColumn = function(columnIndex){
-            return columnsPoints[columnIndex] >= 3;
+        const hasFullRow = function(){
+            for(let i = 0; i < 3; i++){
+                if(rowsPoints[i] >= 3){
+                    return true;
+                }
+            }
+            
+            return false;
+        }
+
+        const hasFullColumn = function(){
+            for(let i = 0; i < 3; i++){
+                if(columnsPoints[i] >= 3){
+                    return true;
+                }
+            }
+            
+            return false;
         }
 
         const hasFullDiagonal = function(){
@@ -130,6 +315,7 @@ const ticTacToe = (function(){
 
         return {
             addPoint,
+            removePoint,
             hasFullRow,
             hasFullColumn,
             hasFullDiagonal,
@@ -145,33 +331,7 @@ const ticTacToe = (function(){
     }
 
     const player = function(isHuman, name, symbol){
-        const choosePositionIndex = function(currentGame){
-            if(currentGame.gameOver()){
-                throw "The game's over. No positions are available";
-            }
-
-            let row; 
-            let column;
-            let rowAvailable = false;
-            let columnAvailable = false;
-            const positionMatrix = currentGame.getPositionMatrix();
-
-            while(!rowAvailable){
-                row = Math.floor(Math.random() * 3);
-                rowAvailable = positionMatrix[row].length < 3 || 
-                    positionMatrix[row].includes(undefined);
-            }
-
-            while(!columnAvailable){
-                column = Math.floor(Math.random() * 3);
-                columnAvailable = !(column in positionMatrix[row]);
-            }
-            
-            return {row, column};
-        }
-
         return {
-            choosePositionIndex, 
             isHuman, 
             name, 
             symbol
@@ -208,6 +368,7 @@ const ticTacToe = (function(){
                     const messageElement = htmlToElement(html);
                     removeAllChildren(gameStatusElement);
                     gameStatusElement.appendChild(messageElement);
+                    showStatus();
                 }
 
                 const showPositionTakenMessage = function(playerName){
@@ -251,6 +412,14 @@ const ticTacToe = (function(){
                     );
                 }
 
+                const hideStatus = function(){
+                    gameStatusElement.style.display = 'none';
+                }
+
+                const showStatus = function(){
+                    gameStatusElement.style.display = '';
+                }
+
                 const addPositionToBoard = function(blockElement, blockId, symbol){
                     if(!blockElement){
                         blockElement = gameBoardElement.querySelector(`[data-block-id="${blockId}"]`);
@@ -272,6 +441,7 @@ const ticTacToe = (function(){
                     showPlayerTurnMessage,
                     showNewGameMessage,
                     addPositionToBoard,
+                    hideStatus,
                     clearBoard
                 };
 
@@ -297,7 +467,13 @@ const ticTacToe = (function(){
             formElement.addEventListener("submit", function(event){
                 event.preventDefault();
 
-                const playAI = (formElement.querySelector('[name="play-ai"]:checked').value == 'true');
+                const playAISelectedRadio = formElement.querySelector('[name="play-ai"]:checked');
+                
+                let playAI = false;
+                if(playAISelectedRadio){
+                    playAI = (playAISelectedRadio.value == 'true');
+                }
+
                 const player1 = formElement.querySelector('[name="player1"]').value;
                 const player2 = formElement.querySelector('[name="player2"]').value;
                 startNewGame(playAI, player1, player2, uiHelper);
@@ -308,7 +484,7 @@ const ticTacToe = (function(){
             });
         }
 
-        const addPositionToBlock = function(blockElement, positionIndex, uiHelper){
+        const addPositionToBlock = function(blockElement, position, uiHelper){
             if(currentGame.gameOver()){
                 return false;
             }
@@ -318,29 +494,29 @@ const ticTacToe = (function(){
                 blockId = blockElement.dataset.blockId;
             }
 
-            const getPositionIndexFromBlockId = function(blockId){
-                const row = Math.floor(blockId/3);
-                const column = blockId - (3*row);
+            const getPositionFromBlockId = function(blockId){
+                const rowIndex = Math.floor(blockId/3);
+                const columnIndex = blockId - (3*rowIndex);
 
-                return {row, column};
+                return {rowIndex, columnIndex};
             }
 
-            const getBlockIdFromPositionIndex = function(positionIndex){
-                return positionIndex.column + (positionIndex.row * 3);
+            const getBlockIdFromPosition = function(position){
+                return position.columnIndex + (position.rowIndex * 3);
             }
             
-            if(!positionIndex){
-                positionIndex = getPositionIndexFromBlockId(blockId);
+            if(!position){
+                position = getPositionFromBlockId(blockId);
             }
             
             const currentPlayer = currentGame.getCurrentPlayer();
 
-            if(!currentGame.addPosition(positionIndex.row, positionIndex.column)){
+            if(!currentGame.addPosition(position.rowIndex, position.columnIndex)){
                 uiHelper.showPositionTakenMessage(currentPlayer.name);
                 return false;
             }
 
-            blockId = blockId ? blockId : getBlockIdFromPositionIndex(positionIndex);
+            blockId = blockId ? blockId : getBlockIdFromPosition(position);
             uiHelper.addPositionToBoard(blockElement, blockId, currentPlayer.symbol);
 
             switch(currentGame.getGameStatus()) {
@@ -359,8 +535,8 @@ const ticTacToe = (function(){
                     }
 
                     if(!nextPlayer.isHuman){
-                        const positionIndex = nextPlayer.choosePositionIndex(currentGame);
-                        addPositionToBlock(null, positionIndex, uiHelper);
+                        const bestPosition = currentGame.nextBestPosition();
+                        addPositionToBlock(null, bestPosition, uiHelper);
                     }
                 break;
             }
@@ -370,15 +546,20 @@ const ticTacToe = (function(){
 
         const startNewGame = function(playWithAI, player1, player2, uiHelper){
             player1 = player(true, player1, "X");
+            player2 = player(true, player2, "O");
+
             if(playWithAI){
                 player2 = player(false, "Computer", "O");
-            } else {
-                player2 = player(true, player2, "O");
             }
 
             currentGame = game(player1, player2);
             uiHelper.clearBoard();
-            uiHelper.showPlayerTurnMessage(player1.name);
+
+            if(currentGame.hasMultipleHumanPlayers()){
+                uiHelper.showPlayerTurnMessage(player1.name);
+            } else {
+                uiHelper.hideStatus();
+            }
         }
 
         return {init};
